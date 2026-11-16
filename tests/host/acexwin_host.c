@@ -2,6 +2,8 @@
  * buffer in memory, the events come from ACE_EVENTS, the clock moves 20 ms
  * a wait, and the frame is written as a PPM (ACE_DUMP) when the game ends.
  *
+ * The clock moves 1 ms each time it is read (lib/stack.c spins on it).
+ *
  * ACE_EVENTS is a list of events, separated by spaces:
  *   c:X,Y      a click of button 1 (down and up) at X,Y
  *   d:X,Y,U,V  button 1 down at X,Y, moved to U,V, up there
@@ -130,6 +132,8 @@ int acx_plat_event(XWin_Event *ev)
 }
 
 void acx_plat_wait(void) { now += 20; }
-unsigned long acx_plat_ms(void) { return now; }
+/* lib/stack.c waits for the clock to tick over in a loop: every look at
+ * it moves it on a millisecond, as a real clock would */
+unsigned long acx_plat_ms(void) { return ++now; }
 void acx_plat_beep(void) {}
 void acx_plat_close(void) {}
