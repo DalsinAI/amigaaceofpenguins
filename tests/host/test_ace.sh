@@ -98,5 +98,7 @@ run solitaire "k:257 w" "$T/sol-help.ppm" &&
 run solitaire "c:30,40 w d:110,40,110,200 w d:300,200,500,300 w" "$T/sol-drag.ppm" &&
     check "solitaire: drags run to their end" "$T/sol-drag.ppm" 12
 
+# ACE_TEST_KEEP=dir keeps the frames (PPM) to look at
+if [ -n "${ACE_TEST_KEEP:-}" ]; then mkdir -p "$ACE_TEST_KEEP" && cp "$T"/*.ppm "$ACE_TEST_KEEP"/; fi
 if [ "$fails" -ne 0 ]; then echo "host tests: $fails failed"; exit 1; fi
 echo "host tests: all passed"
