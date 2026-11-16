@@ -34,7 +34,7 @@ $CC -O1 -w -std=gnu89 $PERM -o "$T/text2c" "$ACE/lib/text2c.c"
 GAMES="canfield freecell golf mastermind merlin minesweeper pegged solitaire spider taipei thornq"
 
 UP="-std=gnu89 $PERM -w -O1 -I$ROOT/amiga/include -I$ROOT/amiga -I$ACE/lib -I$ACE/games"
-MINE="-std=gnu99 -Wall -Werror -O1 -I$ROOT/amiga/include -I$ROOT/amiga -I$ACE/lib"
+MINE="-std=gnu99 -Wall -Werror -Wno-unused-function -O1 -I$ROOT/amiga/include -I$ROOT/amiga -I$ACE/lib"
 for f in table help imagelib table_rn funcs; do $CC $UP -c -o "$T/$f.o" "$ACE/lib/$f.c"; done
 $CC $UP -Dgettimeofday=ace_gettimeofday -Dselect=ace_select -c -o "$T/stack.o" "$ACE/lib/stack.c"
 $CC $UP -c -o "$T/images.o" "$T/images.c"

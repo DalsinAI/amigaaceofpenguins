@@ -40,8 +40,8 @@ typedef struct {
 #include "xwin.h"
 #include "acexwin.h"
 
-/* What the rest of Ace reads */
-OptionDesc *xwin_options = 0;
+/* What the rest of Ace reads (lib/table.c has xwin_options: no -rotate,
+ * no -visual here, so it stays 0) */
 int font_width, font_height;
 int table_background;
 int help_background;

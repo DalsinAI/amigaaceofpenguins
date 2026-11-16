@@ -43,7 +43,8 @@ INC       = -Iamiga/include -Iamiga -I$(ACE)/lib -I$(ACE)/games -I$(ACGAME)/incl
 # clip stack, which is fine on a 32-bit Amiga): gnu89 and -fpermissive for
 # upstream's files, and its warnings are upstream's (-w).
 UPFLAGS   = -noixemul $(OPT) $(CPU) -std=gnu89 -fpermissive -w $(INC)
-CFLAGS    = -noixemul $(OPT) $(CPU) -std=gnu99 -Wall $(INC)
+# -Wno-unused-function: cards.h declares a game's callbacks static
+CFLAGS    = -noixemul $(OPT) $(CPU) -std=gnu99 -Wall -Wno-unused-function $(INC)
 LDFLAGS   = -noixemul $(CPU)
 LIBS      = $(ACGAMELIB)/libacgame.a -L$(DEPS)/lib -lpng -lz -lm
 
@@ -160,3 +161,4 @@ clean:
 	rm -rf $(BUILD)
 
 .PHONY: all programs package clean
+.SECONDARY:
