@@ -25,13 +25,15 @@ if ! printf '#include <png.h>\nint main(void){return png_access_version_number()
     exit 0
 fi
 
+# upstream is old C: gnu89, and -fpermissive where the compiler has it (GCC 14 on)
+PERM=$($CC -fpermissive -x c -E /dev/null >/dev/null 2>&1 && echo -fpermissive || true)
 # upstream's generators, then the pictures and the help pages as C
-$CC -O1 -w -o "$T/make-imglib" "$ACE/lib/make-imglib.c" -lpng -lz
-$CC -O1 -w -o "$T/text2c" "$ACE/lib/text2c.c"
+$CC -O1 -w -std=gnu89 $PERM -o "$T/make-imglib" "$ACE/lib/make-imglib.c" -lpng -lz
+$CC -O1 -w -std=gnu89 $PERM -o "$T/text2c" "$ACE/lib/text2c.c"
 "$T/make-imglib" -n cards -i "$ACE/lib/png" -d "$T/images.d" "$ACE/lib/images.in" "$T/images.c"
 GAMES="canfield freecell golf mastermind merlin minesweeper pegged solitaire spider taipei thornq"
 
-UP="-std=gnu89 -fpermissive -w -O1 -I$ROOT/amiga/include -I$ROOT/amiga -I$ACE/lib -I$ACE/games"
+UP="-std=gnu89 $PERM -w -O1 -I$ROOT/amiga/include -I$ROOT/amiga -I$ACE/lib -I$ACE/games"
 MINE="-std=gnu99 -Wall -Werror -O1 -I$ROOT/amiga/include -I$ROOT/amiga -I$ACE/lib"
 for f in table help imagelib table_rn funcs; do $CC $UP -c -o "$T/$f.o" "$ACE/lib/$f.c"; done
 $CC $UP -Dgettimeofday=ace_gettimeofday -Dselect=ace_select -c -o "$T/stack.o" "$ACE/lib/stack.c"
