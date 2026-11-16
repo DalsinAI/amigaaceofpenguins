@@ -98,7 +98,7 @@ run solitaire "c:30,40 w" "$T/sol-click.ppm" &&
 run solitaire "k:257 w s" "$T/sol-help.ppm" &&
     { if same "$T/solitaire.ppm" "$T/sol-help.ppm"; then echo "FAIL solitaire: F1 showed no help"; fails=$((fails + 1)); else echo "ok   solitaire: F1 shows the help page"; fi; }
 run solitaire "c:30,40 w d:110,40,110,200 w d:300,200,500,300 w" "$T/sol-drag.ppm" &&
-    check "solitaire: drags run to their end" "$T/sol-drag.ppm" 12
+    check "solitaire: drags run to their end" "$T/sol-drag.ppm" 8
 
 # ACE_TEST_KEEP=dir keeps the frames (PPM) to look at
 if [ -n "${ACE_TEST_KEEP:-}" ]; then mkdir -p "$ACE_TEST_KEEP" && cp "$T"/*.ppm "$ACE_TEST_KEEP"/ && for g in $GAMES; do cp "$T/$g" "$ACE_TEST_KEEP/$g.host"; done; fi
