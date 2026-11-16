@@ -1,0 +1,160 @@
+# Ace of Penguins for GFOS (AmigaOS 3.2 with GFOpenUp), 68040/68060: the
+# eleven games on ACGame's 8-bit screen (acgame.library), no SDL and no
+# GFOpenGPU, built soft float (the stove's fpuauto uses the FPU when the
+# Amiga has one).
+#
+#   make -f amiga/Makefile.amigaos -j4 ACE=/path/to/ace-1.4 \
+#        ACGAME=/path/to/acgame ACGAMELIB=/path/to/acgame-out [STOVE=...]
+#
+# ACE is upstream's source, unpacked from the tarball package/ace.lock names,
+# with amiga/patches applied (package/build-amiga.sh does both). ACGAME is
+# DalsinAI/acgame (its headers), ACGAMELIB its build (libacgame.a, the stubs
+# that open acgame.library, and acgame.library itself). STOVE is a
+# GFOpenAmigaGCC 16.2.0-open6 stove: prefix/ has the compiler, the NDK, and
+# libpng and zlib in m68k-amigaos/port-deps.
+#
+# Upstream's lib/xwin.c is not built: amiga/acexwin.c draws on ACGame's frame
+# (amiga/acexwin_amiga.c), and amiga/include/X11/ has the few Xlib names
+# lib/table.c and lib/help.c still use. The pictures and help pages become C
+# as upstream makes them, with its own make-imglib and text2c built for this
+# machine (HOSTCC, with this machine's libpng).
+#
+# Output: build/amigaos/AceOfPenguins/ (the drawer: one program a game,
+# Libs/acgame.library, ReadMe, the licence, GlowIcons), and
+# build/amigaos/AceOfPenguins.info and Install-AceOfPenguins beside it.
+
+ACE       ?= ../ace-1.4
+ACGAME    ?= ../acgame
+ACGAMELIB ?= $(ACGAME)/build-amiga
+STOVE     ?= $(HOME)/AmiCradle/stoves/os32-gcc16-open6
+PREFIX    ?= $(STOVE)/prefix
+CC        = $(PREFIX)/bin/m68k-amigaos-gcc
+AR        = $(PREFIX)/bin/m68k-amigaos-ar
+HOSTCC    ?= cc
+DEPS      ?= $(PREFIX)/m68k-amigaos/port-deps
+CPU       ?= -m68040 -msoft-float
+# -fno-tree-loop-distribute-patterns: GCC 16's loop miscompile.
+OPT       ?= -O2 -fomit-frame-pointer -fno-tree-loop-distribute-patterns
+
+INC       = -Iamiga/include -Iamiga -I$(ACE)/lib -I$(ACE)/games -I$(ACGAME)/include -I$(DEPS)/include
+# Ace is 1990s C (empty parameter lists, int-sized pointers in table.c's
+# clip stack, which is fine on a 32-bit Amiga): gnu89 and -fpermissive for
+# upstream's files, and its warnings are upstream's (-w).
+UPFLAGS   = -noixemul $(OPT) $(CPU) -std=gnu89 -fpermissive -w $(INC)
+CFLAGS    = -noixemul $(OPT) $(CPU) -std=gnu99 -Wall $(INC)
+LDFLAGS   = -noixemul $(CPU)
+LIBS      = $(ACGAMELIB)/libacgame.a -L$(DEPS)/lib -lpng -lz -lm
+
+BUILD     = build/amigaos
+OBJ       = $(BUILD)/obj
+GEN       = $(BUILD)/gen
+DRAWER    = $(BUILD)/AceOfPenguins
+
+# The games and their names in the drawer (Taipedit, the layout editor, is
+# left out: it writes layouts for the X version's taipei to load).
+GAMES     = canfield freecell golf mastermind merlin minesweeper pegged \
+            solitaire spider taipei thornq
+NAMES     = Canfield FreeCell Golf Mastermind Merlin Minesweeper Pegged \
+            Solitaire Spider Taipei Thornq
+
+LIBSRC    = table help stack imagelib table_rn funcs
+LIBOBJS   = $(LIBSRC:%=$(OBJ)/lib/%.o) $(OBJ)/lib/images.o $(OBJ)/acexwin.o $(OBJ)/acexwin_amiga.o
+
+# What each game's pictures are (games/Makefile.am)
+canfield_PNG    = canfield.png
+freecell_PNG    = freecell.png
+golf_PNG        = golf.png golf-arrow.png golf-noarrow.png
+mastermind_PNG  = mastermind-b.png mastermind-c.png mastermind-e.png mastermind-eb.png \
+                  mastermind-g.png mastermind-k.png mastermind-o.png mastermind-p.png \
+                  mastermind-r.png mastermind-w.png mastermind-y.png mastermind.png
+merlin_PNG      = merlin.png merlin-c.png merlin-b.png
+minesweeper_PNG = minesweeper.png minesweeper-x.png minesweeper-t.png minesweeper-c12.png \
+                  minesweeper-c24.png minesweeper-c36.png minesweeper-c48.png
+pegged_PNG      = pegged.png pegged-h.png pegged-p.png
+solitaire_PNG   = solitaire.png
+spider_PNG      = spider.png golf-arrow.png golf-noarrow.png
+taipei_PNG      = taipei taipei-tiles
+thornq_PNG      = thornq.png thornq-arrow.png thornq-noarrow.png
+# canfield has no help page upstream (its help call is commented out)
+HELPGAMES = $(filter-out canfield,$(GAMES))
+
+all: programs package
+
+programs: $(GAMES:%=$(OBJ)/%.prog)
+
+$(GEN)/make-imglib: $(ACE)/lib/make-imglib.c
+	@mkdir -p $(GEN)
+	$(HOSTCC) -O1 -w -o $@ $< -lpng -lz
+
+$(GEN)/text2c: $(ACE)/lib/text2c.c
+	@mkdir -p $(GEN)
+	$(HOSTCC) -O1 -w -o $@ $<
+
+$(GEN)/images.c: $(GEN)/make-imglib $(ACE)/lib/images.in
+	$(GEN)/make-imglib -n cards -i $(ACE)/lib/png -d $(GEN)/images.d $(ACE)/lib/images.in $@
+
+$(GEN)/%-img.c: $(GEN)/make-imglib
+	$(GEN)/make-imglib -i $(ACE)/games -n appimglib - $@ $($*_PNG)
+
+$(GEN)/%-help.c: $(ACE)/games/%.html $(GEN)/text2c
+	$(GEN)/text2c $*_help < $< > $@
+
+$(OBJ)/lib/stack.o: $(ACE)/lib/stack.c
+	@mkdir -p $(dir $@)
+	$(CC) $(UPFLAGS) -Dgettimeofday=ace_gettimeofday -Dselect=ace_select -c -o $@ $<
+
+$(OBJ)/lib/%.o: $(ACE)/lib/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(UPFLAGS) -c -o $@ $<
+
+$(OBJ)/lib/images.o: $(GEN)/images.c
+	@mkdir -p $(dir $@)
+	$(CC) $(UPFLAGS) -c -o $@ $<
+
+$(OBJ)/%.o: amiga/%.c amiga/acexwin.h
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(OBJ)/libcards.a: $(LIBOBJS)
+	rm -f $@
+	$(AR) rcs $@ $(LIBOBJS)
+
+$(OBJ)/games/%.o: $(ACE)/games/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(UPFLAGS) -c -o $@ $<
+
+$(OBJ)/games/%-gen.o: $(GEN)/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(UPFLAGS) -c -o $@ $<
+
+$(OBJ)/games/taipeilib.o: $(ACE)/games/taipeilib.c
+
+# One rule a game: its source, its pictures, its help page (when it has one)
+define GAME_RULE
+$(OBJ)/$(1).prog: $(OBJ)/games/$(1).o $(OBJ)/games/$(1)-img-gen.o \
+		$(if $(filter $(1),$(HELPGAMES)),$(OBJ)/games/$(1)-help-gen.o) \
+		$(if $(filter taipei,$(1)),$(OBJ)/games/taipeilib.o) $(OBJ)/libcards.a
+	$(CC) $(LDFLAGS) -o $$@ $$(filter %.o,$$^) $(OBJ)/libcards.a $(LIBS)
+endef
+$(foreach g,$(GAMES),$(eval $(call GAME_RULE,$(g))))
+
+package: programs AMIGA_PORT.md
+	rm -rf $(DRAWER)
+	mkdir -p $(DRAWER)/Libs
+	set -- $(NAMES); for g in $(GAMES); do \
+	    cp $(OBJ)/$$g.prog $(DRAWER)/$$1; \
+	    cp amiga/icons/$$1.info $(DRAWER)/$$1.info; shift; done
+	cp $(ACGAMELIB)/acgame.library $(DRAWER)/Libs/
+	cp AMIGA_PORT.md $(DRAWER)/ReadMe
+	cp $(ACE)/COPYING $(DRAWER)/COPYING.txt
+	cp $(ACE)/README $(DRAWER)/ReadMe-Ace
+	cp amiga/icons/ReadMe.info $(DRAWER)/ReadMe.info
+	cp amiga/icons/ReadMe.info $(DRAWER)/ReadMe-Ace.info
+	cp amiga/icons/ReadMe.info $(DRAWER)/COPYING.txt.info
+	cp amiga/icons/AceOfPenguins-drawer.info $(BUILD)/AceOfPenguins.info
+	cp amiga/Install-AceOfPenguins amiga/Install-AceOfPenguins.info $(BUILD)/
+
+clean:
+	rm -rf $(BUILD)
+
+.PHONY: all programs package clean
