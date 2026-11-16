@@ -1,0 +1,13 @@
+{
+  "name": "Ace of Penguins",
+  "version": "1.4-gfos1",
+  "drawer": "AceOfPenguins",
+  "program": "Solitaire",
+  "cpu": "68040",
+  "fpu": false,
+  "space": 2500000,
+  "modules": [],
+  "parent": "Work:Games",
+  "badge": "icons/art/solitaire.png",
+  "script": "Install-AceOfPenguins"
+}
