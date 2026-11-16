@@ -78,8 +78,10 @@ print(f"ok   {name}: {w}x{h}, {len(cols)} colours")
 PY
 }
 run() {	# game, events, ppm
-    if ! ACE_EVENTS="$2" ACE_DUMP="$3" timeout 60 "$T/$1" > "$T/out.txt" 2>&1; then
-        echo "FAIL $1 ($2): exit $?"; cat "$T/out.txt"; fails=$((fails + 1)); return 1
+    rc=0
+    ACE_EVENTS="$2" ACE_DUMP="$3" timeout 60 "$T/$1" > "$T/out.txt" 2>&1 || rc=$?
+    if [ "$rc" -ne 0 ]; then
+        echo "FAIL $1 ($2): exit $rc"; cat "$T/out.txt"; fails=$((fails + 1)); return 1
     fi
 }
 
@@ -88,17 +90,17 @@ for g in $GAMES; do
 done
 check "solitaire deals the cards" "$T/solitaire.ppm" 12
 check "freecell deals the cards" "$T/freecell.ppm" 12
-check "spider deals the cards" "$T/spider.ppm" 12
+check "spider deals the cards (one suit: hearts)" "$T/spider.ppm" 6
 
 same() { cmp -s "$1" "$2"; }
 run solitaire "c:30,40 w" "$T/sol-click.ppm" &&
     { if same "$T/solitaire.ppm" "$T/sol-click.ppm"; then echo "FAIL solitaire: the stock click changed nothing"; fails=$((fails + 1)); else echo "ok   solitaire: a click on the stock turns a card"; fi; }
-run solitaire "k:257 w" "$T/sol-help.ppm" &&
+run solitaire "k:257 w s" "$T/sol-help.ppm" &&
     { if same "$T/solitaire.ppm" "$T/sol-help.ppm"; then echo "FAIL solitaire: F1 showed no help"; fails=$((fails + 1)); else echo "ok   solitaire: F1 shows the help page"; fi; }
 run solitaire "c:30,40 w d:110,40,110,200 w d:300,200,500,300 w" "$T/sol-drag.ppm" &&
     check "solitaire: drags run to their end" "$T/sol-drag.ppm" 12
 
 # ACE_TEST_KEEP=dir keeps the frames (PPM) to look at
-if [ -n "${ACE_TEST_KEEP:-}" ]; then mkdir -p "$ACE_TEST_KEEP" && cp "$T"/*.ppm "$ACE_TEST_KEEP"/; fi
+if [ -n "${ACE_TEST_KEEP:-}" ]; then mkdir -p "$ACE_TEST_KEEP" && cp "$T"/*.ppm "$ACE_TEST_KEEP"/ && for g in $GAMES; do cp "$T/$g" "$ACE_TEST_KEEP/$g.host"; done; fi
 if [ "$fails" -ne 0 ]; then echo "host tests: $fails failed"; exit 1; fi
 echo "host tests: all passed"

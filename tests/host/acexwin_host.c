@@ -7,6 +7,7 @@
  *   d:X,Y,U,V  button 1 down at X,Y, moved to U,V, up there
  *   k:N        the key N (a number: 27 Esc, 113 q, 257 F1, ...)
  *   w          nothing for a while (animations finish)
+ *   s          the frame written to ACE_DUMP now (else it is written at the end)
  * After the last one the game gets Esc, and then the window's close.
  * Copyright (c) 2026 AmiCradle Team. GPL-2.0-or-later, like Ace of Penguins. */
 #include <stdio.h>
@@ -24,6 +25,8 @@ static unsigned long now;
 static XWin_Event queue[64];
 static int qn, qi, ended;
 static const char *script;
+static int dumped;
+static void dump(void);
 
 void acx_plat_display_size(int *w, int *h) { *w = 800; *h = 600; }
 
@@ -58,6 +61,9 @@ static int refill(void)
 	} else if (*script == 'w') {
 		n = 1;
 		add(ev_none, 0, 0, 0, 0);
+	} else if (*script == 's') {
+		n = 1;
+		add(ev_none, 0, 0, 0, 's');
 	} else {
 		fprintf(stderr, "ACE_EVENTS: cannot read \"%s\"\n", script);
 		exit(2);
@@ -71,12 +77,13 @@ static void dump(void)
 	const char *path = getenv("ACE_DUMP");
 	FILE *f;
 
-	if (!path || !fb) return;
+	if (!path || !fb || dumped) return;
 	f = fopen(path, "wb");
 	if (!f) return;
 	fprintf(f, "P6\n%d %d\n255\n", fw, fh);
 	for (int i = 0; i < fw * fh; i++) fwrite(pal[fb[i]], 1, 3, f);
 	fclose(f);
+	dumped = 1;
 }
 
 int acx_plat_open(int w, int h, const unsigned char rgb[256][3], unsigned char **pixels, int *pitch)
@@ -115,7 +122,10 @@ int acx_plat_event(XWin_Event *ev)
 	*ev = queue[qi++];
 	now += 300; /* far enough apart not to be double clicks */
 	ev->time = (int)now;
-	if (ev->type == ev_none) return 0;
+	if (ev->type == ev_none) {
+		if (ev->key == 's') { extern void flush(void); flush(); dump(); }
+		return 0;
+	}
 	return 1;
 }
 
